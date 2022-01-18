@@ -1,0 +1,44 @@
+(haskell
+    (type_alias
+        name: (type)
+        (type_name
+            (type)))
+
+    (type_alias
+        name: (type)
+        (type_variable)
+        (type_name
+            (type)))
+
+    (type_alias
+        name: (type)
+        (type_variable)
+        (type_apply
+            (type_name
+                (type))
+            (type_name
+                (type_variable))))
+
+    (type_alias
+        name: (type)
+        (type_list
+            (type_name
+                (type))))
+
+    (type_alias
+        name: (type)
+        (type_variable)
+        (type_variable)
+        (type_tuple
+            (type_name
+                (type_variable))
+            (comma)
+            (type_name
+                (type_variable))))
+)
+
+type TestAlias = String
+type TestGhost a = String
+type TestVariable a = Maybe a
+type TestList = [Char]
+type TestTuple a b = (a, b)
