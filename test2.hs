@@ -7,6 +7,8 @@ type TestNestedList = [[Char]]
 type TestTuple = (String, Int)
 type TestTupleMixed a = (String, a)
 type TestTupleVars a b = (a, b)
+type TestTupleVars a = (a, a)
 type TestUnit = ()
 
+type TestFunc = Int -> Int
 

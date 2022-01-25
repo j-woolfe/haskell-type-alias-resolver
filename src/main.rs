@@ -37,15 +37,16 @@ fn main() {
     let mut query_cursor = QueryCursor::new();
 
     // Input Type sig
-    let input_sig = "a :: Int -> Int".as_bytes();
-    let sig_tree = parser.parse(input_sig, None).unwrap();
+    let input_sig = "afunc :: (a, b)";
+    let sig_tree = parser.parse(input_sig.as_bytes(), None).unwrap();
 
     let sig_query = "(signature) @sig";
     let get_sig_type = Query::new(language, &sig_query).unwrap();
-    let sig_matches = query_cursor.matches(&get_sig_type, sig_tree.root_node(), input_sig);
+    let sig_matches = query_cursor.matches(&get_sig_type, sig_tree.root_node(), input_sig.as_bytes());
 
     println!("Input type signature");
-    println!("{}", sig_tree.root_node().to_sexp());
+    println!("{}", input_sig);
+    // println!("{}", sig_tree.root_node().to_sexp());
 
     let sig_nodes: Vec<String> = sig_matches
         .flat_map(|m| m.captures)
@@ -63,27 +64,17 @@ fn main() {
         .collect();
     println!();
 
-    // for string in sig_nodes.by_ref() {
-    //     println!("{}", string);
-    // }
-
-    let source_path = Path::new("test.hs");
+    let source_path = Path::new("test2.hs");
     let source_code = read_to_string(source_path).unwrap();
     let source = source_code.as_bytes();
 
     // let source = "type TestTuple a b = (a, b)".as_bytes();
-    // let source = "type TestVariable a = Maybe a".as_bytes();
 
     let tree = parser.parse(source, None).unwrap();
 
-    // let query = "(type_alias) @alias";
-    // let query = "(type_alias (type_name (type))) @alias";
     let query = format!("{}{}{}", "(type_alias ", sig_nodes[0], ") @alias");
-    dbg!(&query);
+    // dbg!(&query);
 
-    // let type_aliases_sexp = "(type_alias name: (type) @alias_lhs (type_name (type) @alias_rhs))";
-    // let type_list_sexp = "(type_alias name: (type) @list_lhs (type_list (type_name (type))) @list_rhs)";
-    // let query = format!("{} {}", type_aliases_sexp, type_list_sexp);
     let get_type_aliases = Query::new(language, &query).unwrap();
 
     let matches = query_cursor.matches(&get_type_aliases, tree.root_node(), source);
@@ -92,7 +83,7 @@ fn main() {
     // let strings = nodes.map(|n| get_representation(n, source));
     let strings = nodes.map(|n| n.utf8_text(source).unwrap());
 
-    println!("{}", tree.root_node().to_sexp());
+    // println!("{}", tree.root_node().to_sexp());
 
     println!();
 
