@@ -43,20 +43,28 @@ fn main() {
     let sig_query = "(signature) @sig";
     let get_sig_type = Query::new(language, &sig_query).unwrap();
     let sig_matches = query_cursor.matches(&get_sig_type, sig_tree.root_node(), input_sig);
-    let sig_nodes = sig_matches.flat_map(|m| m.captures).map(|m| {
-        m.node
-            .child_by_field_name("type")
-            .unwrap()
-            .utf8_text(input_sig)
-            .unwrap()
-    });
 
     println!("Input type signature");
     println!("{}", sig_tree.root_node().to_sexp());
-    for string in sig_nodes {
-        println!("{}", string);
-    }
+
+    let mut sig_nodes = sig_matches
+        .flat_map(|m| m.captures)
+        .map(|m| {
+            m.node
+                .child_by_field_name("type")
+                .unwrap()
+                .next_sibling()
+                .unwrap()
+                .to_sexp()
+            // .utf8_text(input_sig)
+            // .unwrap()
+        })
+        .inspect(|x| println!("{}", x));
     println!();
+
+    // for string in sig_nodes.by_ref() {
+    //     println!("{}", string);
+    // }
 
     let source_path = Path::new("test.hs");
     let source_code = read_to_string(source_path).unwrap();
@@ -67,7 +75,8 @@ fn main() {
 
     let tree = parser.parse(source, None).unwrap();
 
-    let query = "(type_alias) @alias";
+    // let query = "(type_alias) @alias";
+    let query = format!("{} {}", sig_nodes.next().unwrap(), "@alias");
 
     // let type_aliases_sexp = "(type_alias name: (type) @alias_lhs (type_name (type) @alias_rhs))";
     // let type_list_sexp = "(type_alias name: (type) @list_lhs (type_list (type_name (type))) @list_rhs)";
