@@ -37,7 +37,7 @@ fn main() {
     let mut query_cursor = QueryCursor::new();
 
     // Input Type sig
-    let input_sig = "a :: Int".as_bytes();
+    let input_sig = "a :: Int -> Int".as_bytes();
     let sig_tree = parser.parse(input_sig, None).unwrap();
 
     let sig_query = "(signature) @sig";
@@ -47,7 +47,7 @@ fn main() {
     println!("Input type signature");
     println!("{}", sig_tree.root_node().to_sexp());
 
-    let mut sig_nodes = sig_matches
+    let sig_nodes: Vec<String> = sig_matches
         .flat_map(|m| m.captures)
         .map(|m| {
             m.node
@@ -59,7 +59,8 @@ fn main() {
             // .utf8_text(input_sig)
             // .unwrap()
         })
-        .inspect(|x| println!("{}", x));
+        .inspect(|x| println!("{}", x))
+        .collect();
     println!();
 
     // for string in sig_nodes.by_ref() {
@@ -76,7 +77,9 @@ fn main() {
     let tree = parser.parse(source, None).unwrap();
 
     // let query = "(type_alias) @alias";
-    let query = format!("{} {}", sig_nodes.next().unwrap(), "@alias");
+    // let query = "(type_alias (type_name (type))) @alias";
+    let query = format!("{}{}{}", "(type_alias ", sig_nodes[0], ") @alias");
+    dbg!(&query);
 
     // let type_aliases_sexp = "(type_alias name: (type) @alias_lhs (type_name (type) @alias_rhs))";
     // let type_list_sexp = "(type_alias name: (type) @list_lhs (type_list (type_name (type))) @list_rhs)";
@@ -86,9 +89,12 @@ fn main() {
     let matches = query_cursor.matches(&get_type_aliases, tree.root_node(), source);
 
     let nodes = matches.flat_map(|m| m.captures).map(|m| m.node);
-    let strings = nodes.map(|n| get_representation(n, source));
+    // let strings = nodes.map(|n| get_representation(n, source));
+    let strings = nodes.map(|n| n.utf8_text(source).unwrap());
 
     println!("{}", tree.root_node().to_sexp());
+
+    println!();
 
     for string in strings {
         println!("{}", string);
