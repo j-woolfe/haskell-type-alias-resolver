@@ -31,6 +31,7 @@ extern "C" {
 struct Alias {
     query_str: String,
     source: String,
+    terms: Vec<String>,
 }
 
 fn create_target_alias(in_sig: &[u8]) -> Alias {
@@ -61,8 +62,24 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
 
     let query_str = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), ") @alias");
     let source = sig_nodes[0].utf8_text(in_sig).unwrap().to_string();
+    // println!("{}", sig_nodes[0].to_sexp());
 
-    Alias { query_str, source }
+    let terms = get_terms(&sig_nodes[0], in_sig);
+
+    Alias {
+        query_str,
+        source,
+        terms,
+    }
+}
+
+fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<String> {
+    let mut cursor = node.walk();
+
+    node.children(&mut cursor)
+        .filter(|n| n.kind() == "type_name")
+        .map(|n| n.utf8_text(source).unwrap().to_string())
+        .collect()
 }
 
 fn main() {
@@ -74,13 +91,15 @@ fn main() {
     let mut query_cursor = QueryCursor::new();
 
     // Input Type sig
-    let input_sig = "afunc :: Int".as_bytes();
+    let input_sig = "afunc :: (String, JValue)".as_bytes();
 
     let target_alias = create_target_alias(input_sig);
 
     println!("{}", target_alias.source);
+    println!("{:?}", target_alias.terms);
 
-    let source_path = Path::new("test.hs");
+    // let source_path = Path::new("test.hs");
+    let source_path = Path::new("jpairExample.hs");
     let source_code = read_to_string(source_path).unwrap();
     let source = source_code.as_bytes();
 
@@ -94,13 +113,18 @@ fn main() {
 
     let matches = query_cursor.matches(&get_type_aliases, tree.root_node(), source);
 
-    let nodes = matches.flat_map(|m| m.captures).map(|m| m.node);
-    // let filtered_nodes = nodes.filter(|n| 
+    let nodes = matches
+        .flat_map(|m| m.captures)
+        .map(|m| m.node)
+        // .inspect(|n| println!("{}", n.child(3).unwrap().to_sexp()))
+        // .inspect(|n| println!("{:?}", get_terms(&n.child(3).unwrap(), source)))
+        .filter(|n| get_terms(&n.child(3).unwrap(), source).eq(&target_alias.terms));
+    // let filtered_nodes = nodes.filter(|n|
     // let strings = nodes.map(|n| get_representation(n, source));
-    // let strings = nodes.map(|n| n.utf8_text(source).unwrap());
-    let strings = nodes.map(|n| n.to_sexp());
+    let strings = nodes.map(|n| n.utf8_text(source).unwrap());
+    // let strings = nodes.map(|n| n.to_sexp());
 
-    println!("{}", tree.root_node().to_sexp());
+    // println!("{}", tree.root_node().to_sexp());
 
     println!("Matching types:");
     for string in strings {
