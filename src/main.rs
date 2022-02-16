@@ -2,31 +2,22 @@ use tree_sitter::Node as TSNode;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
 use std::fs::read_to_string;
-use std::path::Path;
+
+// CLI library
+use clap::Parser as CLIParser;
 
 extern "C" {
     fn tree_sitter_haskell() -> Language;
 }
 
-// fn get_representation<'a>(node: TSNode, source: &'a [u8]) -> String {
-//     let mut cursor = node.walk();
-//     let lhs_name = node
-//         .child_by_field_name("name")
-//         .unwrap()
-//         .utf8_text(source)
-//         .unwrap();
+#[derive(CLIParser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    type_sig: String,
 
-//     // TODO: Something with type variables
-
-//     let rhs_name = node
-//         .children(&mut cursor)
-//         .find(|n| n.kind() == "type_name")
-//         .unwrap()
-//         .utf8_text(source)
-//         .unwrap();
-
-//     format!("{} := {}", lhs_name, rhs_name)
-// }
+    #[clap(parse(from_os_str))]
+    path: std::path::PathBuf,
+}
 
 struct Alias {
     query_str: String,
@@ -84,6 +75,8 @@ fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<String> {
 }
 
 fn main() {
+    let args = Args::parse();
+
     let mut parser = Parser::new();
 
     let language = unsafe { tree_sitter_haskell() };
@@ -92,17 +85,19 @@ fn main() {
     let mut query_cursor = QueryCursor::new();
 
     // Input Type sig
-    let input_sig = "afunc :: (String, JValue)".as_bytes();
+    let input_sig = format!("afunc :: {}", args.type_sig);
+    // let input_sig = "afunc :: (String, JValue)".as_bytes();
     // let input_sig = "afunc :: Either Error Code".as_bytes();
 
-    let target_alias = create_target_alias(input_sig);
+    let target_alias = create_target_alias(input_sig.as_bytes());
 
     println!("{}", target_alias.source);
     // println!("{:?}", target_alias.terms);
 
     // let source_path = Path::new("lockerLookupExample.hs");
-    let source_path = Path::new("jpairExample.hs");
-    let source_code = read_to_string(source_path).unwrap();
+    // let source_path = Path::new("jpairExample.hs");
+    // let source_code = read_to_string(source_path).unwrap();
+    let source_code = read_to_string(args.path).unwrap();
     let source = source_code.as_bytes();
 
     // let source = "type TestTuple a b = (a, b)".as_bytes();
