@@ -52,7 +52,7 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
         .collect();
 
     let query_str = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), " @alias)");
-    // println!("Query = {}", query_str)
+    println!("Query = {}", query_str);
     let source = sig_nodes[0].utf8_text(in_sig).unwrap().to_string();
     // println!("{}", sig_nodes[0].to_sexp());
 
@@ -66,11 +66,25 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
 }
 
 fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<String> {
-    let mut cursor = node.walk();
+    // let mut cursor = node.walk();
 
-    node.children(&mut cursor)
-        .filter(|n| n.kind() == "type_name")
-        .map(|n| n.utf8_text(source).unwrap().to_string())
+    // node.children(&mut cursor)
+    //     .filter(|n| n.kind() == "type_name")
+    //     .map(|n| n.utf8_text(source).unwrap().to_string())
+    //     .collect()
+
+    let mut query_cursor = QueryCursor::new();
+
+    let type_query = "(type_name) @type";
+
+    let language = unsafe { tree_sitter_haskell() };
+
+    let get_types = Query::new(language, &type_query).unwrap();
+    let type_matches = query_cursor.matches(&get_types, *node, source);
+
+    type_matches
+        .flat_map(|m| m.captures)
+        .map(|m| m.node.utf8_text(source).unwrap().to_string())
         .collect()
 }
 
@@ -92,7 +106,7 @@ fn main() {
     let target_alias = create_target_alias(input_sig.as_bytes());
 
     println!("{}", target_alias.source);
-    // println!("{:?}", target_alias.terms);
+    println!("{:?}", target_alias.terms);
 
     // let source_path = Path::new("lockerLookupExample.hs");
     // let source_path = Path::new("jpairExample.hs");
@@ -117,14 +131,12 @@ fn main() {
         // .inspect(|n| println!("{}", n.child(3).unwrap().to_sexp()))
         // .inspect(|n| println!("{:?}", get_terms(n, source)))
         .filter(|n| get_terms(n, source).eq(&target_alias.terms));
-    // let filtered_nodes = nodes.filter(|n|
-    // let strings = nodes.map(|n| get_representation(n, source));
     let strings = nodes.map(|n| n.parent().unwrap().utf8_text(source).unwrap());
     // let strings = nodes.map(|n| n.to_sexp());
 
     // println!("{}", tree.root_node().to_sexp());
 
-    println!("Matching types:");
+    println!("\nMatching types:");
     for string in strings {
         println!("{}", string);
     }

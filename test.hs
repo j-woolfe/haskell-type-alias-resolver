@@ -1,3 +1,3 @@
-type TestOne = Int
-type TestTwo = String
+type Test a = a -> a
+type TestTwo = String -> String
 
