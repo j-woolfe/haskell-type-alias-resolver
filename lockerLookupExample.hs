@@ -10,6 +10,8 @@ type LockerMap = Map.Map Int (LockerState, Code)
 
 type LookupReturn = Either Error Code
 
+type TestVariable a = a
+
 lockerLookup :: Int -> LockerMap -> LookupReturn
 lockerLookup lockerNumber map = 
   case Map.lookup lockerNumber map of

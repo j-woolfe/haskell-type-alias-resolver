@@ -10,6 +10,8 @@ use clap::Parser as CLIParser;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use regex::Regex;
+
 extern "C" {
     fn tree_sitter_haskell() -> Language;
 }
@@ -60,8 +62,13 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
                 .unwrap()
         })
         .collect();
+    
+    // let query_str = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), " @alias)");
 
-    let query_str = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), " @alias)");
+    let query_str_pre = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), " @alias)");
+    let re = Regex::new(r"\(type\)").unwrap();
+    let query_str = re.replace_all(&query_str_pre, "[(type) (type_variable)]").to_string();
+
     println!("Query = {}", query_str);
     let source = sig_nodes[0].utf8_text(in_sig).unwrap().to_string();
     // println!("{}", sig_nodes[0].to_sexp());
@@ -140,7 +147,10 @@ fn main() {
         // .inspect(|n| println!("{}", n.to_sexp()))
         // .inspect(|n| println!("{}", n.child(3).unwrap().to_sexp()))
         // .inspect(|n| println!("{:?}", get_terms(n, source)))
+
+        //TODO:: More sophisticated match for type variables
         .filter(|n| get_terms(n, source).eq(&target_alias.terms));
+
     // let strings = nodes.map(|n| n.parent().unwrap().utf8_text(source).unwrap());
     // let strings = nodes.map(|n| n.to_sexp());
 
