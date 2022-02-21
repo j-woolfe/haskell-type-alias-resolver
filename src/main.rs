@@ -6,6 +6,10 @@ use std::fs::read_to_string;
 // CLI library
 use clap::Parser as CLIParser;
 
+// JSON Output
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+
 extern "C" {
     fn tree_sitter_haskell() -> Language;
 }
@@ -23,6 +27,12 @@ struct Alias {
     query_str: String,
     source: String,
     terms: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct Match {
+    matched: String,
+    location: [[usize; 2]; 2],
 }
 
 fn create_target_alias(in_sig: &[u8]) -> Alias {
@@ -131,13 +141,37 @@ fn main() {
         // .inspect(|n| println!("{}", n.child(3).unwrap().to_sexp()))
         // .inspect(|n| println!("{:?}", get_terms(n, source)))
         .filter(|n| get_terms(n, source).eq(&target_alias.terms));
-    let strings = nodes.map(|n| n.parent().unwrap().utf8_text(source).unwrap());
+    // let strings = nodes.map(|n| n.parent().unwrap().utf8_text(source).unwrap());
     // let strings = nodes.map(|n| n.to_sexp());
 
     // println!("{}", tree.root_node().to_sexp());
 
-    println!("\nMatching types:");
-    for string in strings {
-        println!("{}", string);
-    }
+    // println!("\nMatching types:");
+    // for string in strings {
+    //     println!("{}", string);
+    // }
+
+    println!("\nJSON Output");
+
+    let out_matches: Vec<Match> = nodes
+        .map(|n| Match {
+            matched: n.parent().unwrap().utf8_text(source).unwrap().to_string(),
+            location: [
+                [n.start_position().row, n.start_position().column],
+                [n.end_position().row, n.end_position().column],
+            ],
+        })
+        .collect();
+
+    let out = json!(
+       {
+        "input": {
+            "type": args.type_sig,
+            // "text": source_code
+            "text": "OMITTED"
+        },
+        "output": out_matches
+    });
+
+    println!("{}", out.to_string());
 }
