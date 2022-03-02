@@ -25,6 +25,18 @@ struct Alias {
     terms: Vec<Term>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct RequestAlias {
+    pub target_type: String,
+    pub source: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ResponseMatches {
+    echo_request: RequestAlias,
+    matches: Vec<Match>,
+}
+
 #[derive(Deserialize, Serialize)]
 struct Match {
     matched: String,
@@ -145,7 +157,7 @@ fn check_variable_consistency(target_terms: &Vec<Term>, candidate_terms: &Vec<Te
     true
 }
 
-pub fn alias_replacement(target_type: &str, source: &[u8]) -> serde_json::Value {
+pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
     let mut parser = Parser::new();
 
     let language = unsafe { tree_sitter_haskell() };
@@ -153,25 +165,27 @@ pub fn alias_replacement(target_type: &str, source: &[u8]) -> serde_json::Value 
 
     let mut query_cursor = QueryCursor::new();
 
+    let source_bytes = request.source.as_bytes();
+
     // Input Type sig
-    let input_sig = format!("afunc :: {}", target_type);
+    let input_sig = format!("afunc :: {}", request.target_type);
 
     let target_alias = create_target_alias(input_sig.as_bytes());
 
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(&request.source, None).unwrap();
 
     let get_type_aliases = Query::new(language, &target_alias.query_str).unwrap();
 
-    let matches = query_cursor.matches(&get_type_aliases, tree.root_node(), source);
+    let matches = query_cursor.matches(&get_type_aliases, tree.root_node(), source_bytes);
 
     let nodes = matches
         .flat_map(|m| m.captures)
         .map(|m| m.node)
-        .filter(|n| check_variable_consistency(&target_alias.terms, &get_terms(n, source)));
+        .filter(|n| check_variable_consistency(&target_alias.terms, &get_terms(n, source_bytes)));
 
     let out_matches: Vec<Match> = nodes
         .map(|n| Match {
-            matched: n.parent().unwrap().utf8_text(source).unwrap().to_string(),
+            matched: n.parent().unwrap().utf8_text(source_bytes).unwrap().to_string(),
             location: [
                 [n.start_position().row, n.start_position().column],
                 [n.end_position().row, n.end_position().column],
@@ -179,13 +193,17 @@ pub fn alias_replacement(target_type: &str, source: &[u8]) -> serde_json::Value 
         })
         .collect();
 
-    json!(
-       {
-        "input": {
-            "type": target_type,
-            // "text": source_code
-            "text": "OMITTED"
-        },
-        "output": out_matches
-    })
+    ResponseMatches { 
+        echo_request: request,
+        matches: out_matches,
+    }
+    // json!(
+    //    {
+    //     "input": {
+    //         "type": target_type,
+    //         // "text": source_code
+    //         "text": "OMITTED"
+    //     },
+    //     "output": out_matches
+    // })
 }
