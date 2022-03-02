@@ -1,6 +1,7 @@
 use tree_sitter::Node as TSNode;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
+use std::collections::HashMap;
 use std::fs::read_to_string;
 
 // CLI library
@@ -25,10 +26,17 @@ struct Args {
     path: std::path::PathBuf,
 }
 
+#[derive(Debug, PartialEq)]
+enum Term {
+    Type(String),
+    Variable(String),
+}
+
+#[allow(dead_code)]
 struct Alias {
     query_str: String,
     source: String,
-    terms: Vec<String>,
+    terms: Vec<Term>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -50,6 +58,7 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
 
     let sig_query = "(signature) @sig";
     let get_sig_type = Query::new(language, &sig_query).unwrap();
+    // let sig_matches = query_cursor.matches(&get_sig_type, sig_tree.root_node(), in_sig);
     let sig_matches = query_cursor.matches(&get_sig_type, sig_tree.root_node(), in_sig);
 
     let sig_nodes: Vec<TSNode> = sig_matches
@@ -62,14 +71,16 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
                 .unwrap()
         })
         .collect();
-    
+
     // let query_str = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), " @alias)");
 
     let query_str_pre = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), " @alias)");
-    let re = Regex::new(r"\(type\)").unwrap();
-    let query_str = re.replace_all(&query_str_pre, "[(type) (type_variable)]").to_string();
+    let re = Regex::new(r"\(type_variable\)|\(type\)").unwrap();
+    let query_str = re
+        .replace_all(&query_str_pre, "[(type) (type_variable)]")
+        .to_string();
 
-    println!("Query = {}", query_str);
+    // println!("Query = {}", query_str);
     let source = sig_nodes[0].utf8_text(in_sig).unwrap().to_string();
     // println!("{}", sig_nodes[0].to_sexp());
 
@@ -82,8 +93,8 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
     }
 }
 
-fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<String> {
-    // let mut cursor = node.walk();
+fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<Term> {
+    let mut cursor = node.walk();
 
     // node.children(&mut cursor)
     //     .filter(|n| n.kind() == "type_name")
@@ -99,10 +110,53 @@ fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<String> {
     let get_types = Query::new(language, &type_query).unwrap();
     let type_matches = query_cursor.matches(&get_types, *node, source);
 
+    // let out =
     type_matches
         .flat_map(|m| m.captures)
-        .map(|m| m.node.utf8_text(source).unwrap().to_string())
+        .map(|m| {
+            // if m.node.child_by_field_name("type_variable").is_none() {
+            if m.node
+                .children(&mut cursor)
+                .any(|n| n.kind() == "type_variable")
+            {
+                Term::Variable(m.node.utf8_text(source).unwrap().to_string())
+            } else {
+                Term::Type(m.node.utf8_text(source).unwrap().to_string())
+            }
+        })
         .collect()
+
+    // println!("{:?}", out);
+    // out
+}
+
+fn check_variable_consistency(target_terms: &Vec<Term>, candidate_terms: &Vec<Term>) -> bool {
+    let mut variable_map = HashMap::new();
+
+    let pairs = candidate_terms.iter().zip(target_terms.iter());
+
+    for pair in pairs {
+        match pair {
+            (Term::Variable(v), Term::Type(t)) => match variable_map.insert(v, t) {
+                None => {}
+                Some(old_t) => {
+                    if old_t != t {
+                        return false;
+                    }
+                }
+            },
+            (Term::Type(t1), Term::Type(t2)) => {
+                if t1 != t2 {
+                    return false;
+                }
+            }
+            (_, Term::Variable(_)) => {
+                panic!("Expected target alias to be concrete type")
+            }
+        }
+    }
+
+    true
 }
 
 fn main() {
@@ -122,8 +176,8 @@ fn main() {
 
     let target_alias = create_target_alias(input_sig.as_bytes());
 
-    println!("{}", target_alias.source);
-    println!("{:?}", target_alias.terms);
+    // println!("{}", target_alias.source);
+    // println!("{:?}", target_alias.terms);
 
     // let source_path = Path::new("lockerLookupExample.hs");
     // let source_path = Path::new("jpairExample.hs");
@@ -147,9 +201,8 @@ fn main() {
         // .inspect(|n| println!("{}", n.to_sexp()))
         // .inspect(|n| println!("{}", n.child(3).unwrap().to_sexp()))
         // .inspect(|n| println!("{:?}", get_terms(n, source)))
-
         //TODO:: More sophisticated match for type variables
-        .filter(|n| get_terms(n, source).eq(&target_alias.terms));
+        .filter(|n| check_variable_consistency(&target_alias.terms, &get_terms(n, source)));
 
     // let strings = nodes.map(|n| n.parent().unwrap().utf8_text(source).unwrap());
     // let strings = nodes.map(|n| n.to_sexp());
@@ -161,7 +214,7 @@ fn main() {
     //     println!("{}", string);
     // }
 
-    println!("\nJSON Output");
+    // println!("\nJSON Output");
 
     let out_matches: Vec<Match> = nodes
         .map(|n| Match {
