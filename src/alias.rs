@@ -5,7 +5,6 @@ use std::collections::HashMap;
 
 // JSON Output
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use regex::Regex;
 extern "C" {
@@ -41,6 +40,8 @@ pub struct ResponseMatches {
 struct Match {
     matched: String,
     location: [[usize; 2]; 2],
+    variable_map: HashMap<String, String>,
+    replaced_type: String,
 }
 
 fn create_target_alias(in_sig: &[u8]) -> Alias {
@@ -93,12 +94,6 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
 
 fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<Term> {
     let mut cursor = node.walk();
-
-    // node.children(&mut cursor)
-    //     .filter(|n| n.kind() == "type_name")
-    //     .map(|n| n.utf8_text(source).unwrap().to_string())
-    //     .collect()
-
     let mut query_cursor = QueryCursor::new();
 
     let type_query = "(type_name) @type";
@@ -108,11 +103,9 @@ fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<Term> {
     let get_types = Query::new(language, &type_query).unwrap();
     let type_matches = query_cursor.matches(&get_types, *node, source);
 
-    // let out =
     type_matches
         .flat_map(|m| m.captures)
         .map(|m| {
-            // if m.node.child_by_field_name("type_variable").is_none() {
             if m.node
                 .children(&mut cursor)
                 .any(|n| n.kind() == "type_variable")
@@ -123,29 +116,31 @@ fn get_terms<'a>(node: &TSNode, source: &'a [u8]) -> Vec<Term> {
             }
         })
         .collect()
-
-    // println!("{:?}", out);
-    // out
 }
 
-fn check_variable_consistency(target_terms: &Vec<Term>, candidate_terms: &Vec<Term>) -> bool {
-    let mut variable_map = HashMap::new();
+fn check_variable_consistency(
+    target_terms: &Vec<Term>,
+    candidate_terms: Vec<Term>,
+) -> Option<HashMap<String, String>> {
+    let mut variable_map: HashMap<String, String> = HashMap::new();
 
     let pairs = candidate_terms.iter().zip(target_terms.iter());
 
     for pair in pairs {
         match pair {
-            (Term::Variable(v), Term::Type(t)) => match variable_map.insert(v, t) {
-                None => {}
-                Some(old_t) => {
-                    if old_t != t {
-                        return false;
+            (Term::Variable(v), Term::Type(t)) => {
+                match variable_map.insert(v.to_string(), t.to_string()) {
+                    None => {}
+                    Some(old_t) => {
+                        if old_t != *t {
+                            return None;
+                        }
                     }
                 }
-            },
+            }
             (Term::Type(t1), Term::Type(t2)) => {
                 if t1 != t2 {
-                    return false;
+                    return None;
                 }
             }
             (_, Term::Variable(_)) => {
@@ -154,7 +149,7 @@ fn check_variable_consistency(target_terms: &Vec<Term>, candidate_terms: &Vec<Te
         }
     }
 
-    true
+    Some(variable_map)
 }
 
 pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
@@ -181,29 +176,63 @@ pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
     let nodes = matches
         .flat_map(|m| m.captures)
         .map(|m| m.node)
-        .filter(|n| check_variable_consistency(&target_alias.terms, &get_terms(n, source_bytes)));
+        .map(|n| {
+            (
+                n,
+                check_variable_consistency(&target_alias.terms, get_terms(&n, source_bytes)),
+            )
+        })
+        .filter(|(_, r)| r.is_some());
 
-    let out_matches: Vec<Match> = nodes
-        .map(|n| Match {
-            matched: n.parent().unwrap().utf8_text(source_bytes).unwrap().to_string(),
-            location: [
+    let matches: Vec<Match> = nodes
+        .map(|(n, r)| {
+            let matched = n
+                .parent()
+                .unwrap()
+                .utf8_text(source_bytes)
+                .unwrap()
+                .to_string();
+
+            let location = [
                 [n.start_position().row, n.start_position().column],
                 [n.end_position().row, n.end_position().column],
-            ],
+            ];
+
+            let variable_map = r.unwrap();
+
+            let re_name = Regex::new(r"type (.*)\s=").unwrap();
+            let temp_matched = matched.clone();
+
+            //TODO: Theres no way this is the way to do this
+            let mut replaced_type = re_name
+                .captures(&temp_matched)
+                .unwrap()
+                .get(1)
+                .unwrap()
+                .as_str()
+                .to_string();
+
+            dbg!(&replaced_type);
+
+            for (v, t) in variable_map.iter() {
+                let re_str = format!(r" {}(?P<after> |\z)", v);
+                let re_vars = Regex::new(&re_str).unwrap();
+                replaced_type = re_vars
+                    .replace_all(&replaced_type, format!(" {}$after", t))
+                    .to_string()
+            }
+
+            Match {
+                matched,
+                location,
+                variable_map,
+                replaced_type: replaced_type.to_string(),
+            }
         })
         .collect();
 
-    ResponseMatches { 
+    ResponseMatches {
         echo_request: request,
-        matches: out_matches,
+        matches,
     }
-    // json!(
-    //    {
-    //     "input": {
-    //         "type": target_type,
-    //         // "text": source_code
-    //         "text": "OMITTED"
-    //     },
-    //     "output": out_matches
-    // })
 }

@@ -17,4 +17,5 @@ type TestFunTuple = (Int, Int) -> String -> (String, (Int, Int))
 type TestVar a = a -> a
 type TestVarMixed a = a -> Int
 type TestVarDiff a b = a -> b
+type TestVarTuple a b = (a, a) -> b -> (b, (a, a))
 
