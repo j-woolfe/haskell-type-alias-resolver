@@ -18,25 +18,26 @@ enum Term {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 struct Alias {
     query_str: String,
     source: String,
     terms: Vec<Term>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RequestAlias {
     pub target_type: String,
     pub source: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ResponseMatches {
     echo_request: RequestAlias,
     matches: Vec<Match>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct Match {
     matched: String,
     location: [[usize; 2]; 2],
@@ -55,10 +56,8 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
     // Input Type sig
     let sig_tree = parser.parse(in_sig, None).unwrap();
 
-    let sig_query = "(signature) @sig";
-    let get_sig_type = Query::new(language, &sig_query).unwrap();
-    // let sig_matches = query_cursor.matches(&get_sig_type, sig_tree.root_node(), in_sig);
-    let sig_matches = query_cursor.matches(&get_sig_type, sig_tree.root_node(), in_sig);
+    let sig_query = Query::new(language, &"(signature) @sig").unwrap();
+    let sig_matches = query_cursor.matches(&sig_query, sig_tree.root_node(), in_sig);
 
     let sig_nodes: Vec<TSNode> = sig_matches
         .flat_map(|m| m.captures)
@@ -71,8 +70,7 @@ fn create_target_alias(in_sig: &[u8]) -> Alias {
         })
         .collect();
 
-    // let query_str = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), " @alias)");
-
+    // Generate query string matching a type or type variable wherever either appear
     let query_str_pre = format!("{}{}{}", "(type_alias ", sig_nodes[0].to_sexp(), " @alias)");
     let re = Regex::new(r"\(type_variable\)|\(type\)").unwrap();
     let query_str = re
@@ -154,7 +152,6 @@ fn check_variable_consistency(
 
 pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
     let mut parser = Parser::new();
-
     let language = unsafe { tree_sitter_haskell() };
     parser.set_language(language).unwrap();
 
@@ -178,7 +175,7 @@ pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
         .map(|m| m.node)
         .map(|n| {
             (
-                n,
+                n,          // Need to pass through node for replacement later
                 check_variable_consistency(&target_alias.terms, get_terms(&n, source_bytes)),
             )
         })
@@ -211,8 +208,6 @@ pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
                 .unwrap()
                 .as_str()
                 .to_string();
-
-            dbg!(&replaced_type);
 
             for (v, t) in variable_map.iter() {
                 let re_str = format!(r" {}(?P<after> |\z)", v);

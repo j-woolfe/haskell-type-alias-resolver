@@ -1,6 +1,7 @@
 module Task where
 
 type JPair = (String, JValue)
+type Pair a b = (a, b)
 
 data JValue = JString String
             | JNumber Double
