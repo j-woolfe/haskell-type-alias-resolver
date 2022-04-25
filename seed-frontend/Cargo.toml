@@ -1,0 +1,14 @@
+[package]
+name = "seed-frontend"
+version = "0.1.0"
+authors = ["Jackson Wain <jwai0004@student.monash.edu>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+seed = "0.8.0"
+serde = "1.0"
+uuid = { version = "0.8.2", features = ["serde", "v4", "wasm-bindgen"] }
+indexmap = { version = "1.6.1", features = ["serde-1"] }
+enclose = "1.1.8"
