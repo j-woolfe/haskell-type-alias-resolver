@@ -2,6 +2,7 @@ use tree_sitter::Node as TSNode;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
 use std::collections::HashMap;
+use std::fmt;
 
 // JSON Output
 use serde::{Deserialize, Serialize};
@@ -37,12 +38,45 @@ pub struct ResponseMatches {
     matches: Vec<Match>,
 }
 
+impl fmt::Display for ResponseMatches {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let matches: Vec<String> = self
+            .matches
+            .clone()
+            .into_iter()
+            .map(|m| m.replaced_type)
+            .collect();
+
+        let target_type = self.echo_request.target_type.clone();
+
+        let out_str = format!(
+            "Target type: {}\nMatched:\n\t{}",
+            target_type,
+            matches.join("\n\t")
+        );
+
+        write!(f, "{}", out_str)
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 struct Match {
     matched: String,
-    location: [[usize; 2]; 2],
+    location: Range,
     variable_map: HashMap<String, String>,
     replaced_type: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+struct Range {
+    start: Position,
+    end: Position,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+struct Position {
+    row: usize,
+    col: usize,
 }
 
 fn create_target_alias(in_sig: &[u8]) -> Alias {
@@ -164,7 +198,8 @@ pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
 
     let target_alias = create_target_alias(input_sig.as_bytes());
 
-    let tree = parser.parse(&request.source, None).unwrap();
+    // let tree = parser.parse(&request.source, None).unwrap();
+    let tree = parser.parse(&source_bytes, None).unwrap();
 
     let get_type_aliases = Query::new(language, &target_alias.query_str).unwrap();
 
@@ -175,7 +210,7 @@ pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
         .map(|m| m.node)
         .map(|n| {
             (
-                n,          // Need to pass through node for replacement later
+                n, // Need to pass through node for replacement later
                 check_variable_consistency(&target_alias.terms, get_terms(&n, source_bytes)),
             )
         })
@@ -190,10 +225,16 @@ pub fn alias_replacement(request: RequestAlias) -> ResponseMatches {
                 .unwrap()
                 .to_string();
 
-            let location = [
-                [n.start_position().row, n.start_position().column],
-                [n.end_position().row, n.end_position().column],
-            ];
+            let location = Range {
+                start: Position {
+                    row: n.start_position().row,
+                    col: n.start_position().column,
+                },
+                end: Position {
+                    row: n.end_position().row,
+                    col: n.end_position().column,
+                },
+            };
 
             let variable_map = r.unwrap();
 

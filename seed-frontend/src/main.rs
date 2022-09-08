@@ -166,6 +166,7 @@ fn view(model: &Model) -> Node<Msg> {
     ]
 }
 
+
 fn code_area() -> Node<Msg> {
     div![
         C!["field"],
@@ -173,12 +174,12 @@ fn code_area() -> Node<Msg> {
             C!["control"],
             textarea![
                 C!["textarea", "is-family-monospace"],
-                input_ev(Ev::Input, Msg::UpdateSource),
                 attrs! {
                     At::Placeholder => "Source code goes here",
                     At::Rows => 20,
                     At::SpellCheck => false,
                 },
+                input_ev(Ev::Input, Msg::UpdateSource),
                 TEST_SOURCE
             ]
         ]
