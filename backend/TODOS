@@ -1,1 +1,17 @@
 Alias names without capital letters break everything
+
+Default to human readable, change to `raw` output
+
+Enable optional PORT for --server
+
+Change command name to htar or something
+
+Improve human readable output
+
+Interactive mode? Repl based on server mode?
+
+Enable multiple targets in single request
+
+Test with --release and see if optimisations are needed
+
+Break target type into subtypes and run for each of them
