@@ -1,22 +1,9 @@
-mod alias;
-
-use crate::alias::{alias_replacement, RequestAlias, ResponseMatches};
+use htar::{run_on_file, start_web_server};
 
 // CLI library
 use clap::Parser as CLIParser;
-use std::fs::read_to_string;
+
 use std::path::PathBuf;
-
-// Web framework
-use axum::{
-    extract,
-    routing::{get, post},
-    Json, Router,
-};
-use http::Method;
-use tower_http::cors::{Any, CorsLayer};
-
-use serde_json;
 
 #[derive(CLIParser)]
 #[clap(author, version, about, long_about = None)]
@@ -49,57 +36,16 @@ async fn main() {
         // TODO:: Add error checking for missing/invalid path
 
         if let (Some(path), Some(target_type)) = (args.path, args.target) {
-            // let source = read_to_string(path).unwrap();
-            let source = read_to_string(path).unwrap();
-            let payload = RequestAlias {
-                source,
-                target_type,
-            };
-
-            let output = alias_replacement(payload);
+            let replacement_data = run_on_file(path, target_type);
 
             if args.human_readable {
-                println!("{}", output);
+                println!("{}", replacement_data)
             } else {
-                println!("{}", serde_json::to_string(&output).unwrap());
+                println!("{}", serde_json::to_string(&replacement_data).unwrap())
             }
         } else {
             //TODO: Improve errors
-            println!("Missing arguments")
+            println!("Missing arguments");
         }
     }
-}
-
-async fn start_web_server() {
-    let app = Router::new()
-        .route("/api", post(get_matching_aliases))
-        .route("/echo", get(echo))
-        // .route("/api", get(|| async {"Hello"}))
-        .layer(
-            CorsLayer::new()
-                .allow_methods(vec![Method::GET, Method::POST])
-                .allow_origin(Any)
-                .allow_headers(Any),
-        );
-
-    // let addr = "0.0.0.0:3000";
-    let addr = "127.0.0.1:3000";
-
-    println!("Serving on {addr}");
-    axum::Server::bind(&addr.parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-}
-
-async fn get_matching_aliases(
-    extract::Json(payload): extract::Json<RequestAlias>,
-) -> Json<ResponseMatches> {
-    // dbg!(&payload);
-    dbg!(alias_replacement(payload.clone()));
-    Json(alias_replacement(payload))
-}
-
-async fn echo(extract::Json(payload): extract::Json<RequestAlias>) -> Json<RequestAlias> {
-    Json(payload)
 }

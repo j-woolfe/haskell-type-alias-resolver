@@ -1,82 +1,14 @@
-use tree_sitter::Node as TSNode;
-use tree_sitter::{Language, Parser, Query, QueryCursor};
+use regex::Regex;
 
 use std::collections::HashMap;
-use std::fmt;
 
-// JSON Output
-use serde::{Deserialize, Serialize};
+use crate::types::{Alias, Match, Position, Range, RequestAlias, ResponseMatches, Term};
 
-use regex::Regex;
+// Treesitter
+use tree_sitter::Node as TSNode;
+use tree_sitter::{Language, Parser, Query, QueryCursor};
 extern "C" {
     fn tree_sitter_haskell() -> Language;
-}
-
-#[derive(Debug, PartialEq)]
-enum Term {
-    Type(String),
-    Variable(String),
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-struct Alias {
-    query_str: String,
-    source: String,
-    terms: Vec<Term>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct RequestAlias {
-    pub target_type: String,
-    pub source: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ResponseMatches {
-    echo_request: RequestAlias,
-    matches: Vec<Match>,
-}
-
-impl fmt::Display for ResponseMatches {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let matches: Vec<String> = self
-            .matches
-            .clone()
-            .into_iter()
-            .map(|m| m.replaced_type)
-            .collect();
-
-        let target_type = self.echo_request.target_type.clone();
-
-        let out_str = format!(
-            "Target type: {}\nMatched:\n\t{}",
-            target_type,
-            matches.join("\n\t")
-        );
-
-        write!(f, "{}", out_str)
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-struct Match {
-    matched: String,
-    location: Range,
-    variable_map: HashMap<String, String>,
-    replaced_type: String,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-struct Range {
-    start: Position,
-    end: Position,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-struct Position {
-    row: usize,
-    col: usize,
 }
 
 fn create_target_alias(in_sig: &[u8]) -> Alias {

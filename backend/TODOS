@@ -15,3 +15,27 @@ Enable multiple targets in single request
 Test with --release and see if optimisations are needed
 
 Break target type into subtypes and run for each of them
+
+
+Broken test
+(Int, String) shouldn't match 
+    type G3Tuple a b c = (a, b, c)
+    type G3TupleMatching a b = (a, b, a)
+
+Running `target/debug/htar -r -p tests/input_files/generic.hs -t '(Int, String)'`
+Target type: (Int, String)
+Matched:
+        G2Tuple Int String
+        G3Tuple Int String c
+        G3TupleMatching Int String
+
+
+
+Maybe shouldn't match
+    type GTag a = a
+    type GMaybe a = Maybe a
+
+Running `target/debug/htar -r -p tests/input_files/generic.hs -t Maybe`
+Target type: Maybe
+Matched:
+        GTag Maybe
