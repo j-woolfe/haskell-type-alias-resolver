@@ -114,9 +114,10 @@ This would require decomposing a target type into smaller expressions and attemp
 match each of them. Some heuristics would need to be applied to determine which subtype
 matches are beneficial as this would greatly increase the average number of matches.
 
-As mentioned earlier, modifying the VSCode extension to use the [language server protocol]
-(https://microsoft.github.io/language-server-protocol/) or reworking the back-end to
-take advantage of incremental parsing would both provide excellent value to the project.
+As mentioned earlier, modifying the VSCode extension to use the 
+[language server protocol](https://microsoft.github.io/language-server-protocol/) or 
+reworking the back-end to take advantage of incremental parsing would both provide 
+excellent value to the project.
 
 Creating new front-ends for HTAR should also be reasonably simple. As a starting point,
 your application should expect responses in the form:
