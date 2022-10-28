@@ -1,6 +1,4 @@
-# Trunk - Seed template
-
-A `cargo-generate` template for setting up a [Trunk](https://github.com/thedodd/trunk) + [Seed](https://seed-rs.org/) project.
+# Haskell Type Alias Resolver Seed Frontend
 
 ## Usage
 

@@ -45,6 +45,9 @@ fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
 //     Model
 // ------ ------
 
+type Source = String;
+type Target = String;
+
 #[derive(Debug, Clone)]
 struct Model {
     source_code: Source,
@@ -61,21 +64,16 @@ impl Model {
     }
 }
 
-type Source = String;
-type Target = String;
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Alias {
     matched: String,
     replaced_type: String,
 }
 
-// TODO: Consolidate types across front/back end
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RequestAlias {
-    pub target_type: String,
-    pub source: String,
+    pub target_type: Target,
+    pub source: Source,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -165,7 +163,6 @@ fn view(model: &Model) -> Node<Msg> {
         alias_display(model),
     ]
 }
-
 
 fn code_area() -> Node<Msg> {
     div![

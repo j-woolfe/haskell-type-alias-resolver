@@ -1,0 +1,40 @@
+{
+  "echo_request": {
+    "target_type": "String -> Int -> [Int]",
+    "source": "type MyAlias a = String -> a -> [a]\ntype MyOtherAlias = String -> Int -> [Int]\n"
+  },
+  "matches": [
+    {
+      "matched": "type MyAlias a = String -> a -> [a]",
+      "location": {
+        "start": {
+          "row": 0,
+          "col": 17
+        },
+        "end": {
+          "row": 0,
+          "col": 35
+        }
+      },
+      "variable_map": {
+        "a": "Int"
+      },
+      "replaced_type": "MyAlias Int"
+    },
+    {
+      "matched": "type MyOtherAlias = String -> Int -> [Int]",
+      "location": {
+        "start": {
+          "row": 1,
+          "col": 20
+        },
+        "end": {
+          "row": 1,
+          "col": 42
+        }
+      },
+      "variable_map": {},
+      "replaced_type": "MyOtherAlias"
+    }
+  ]
+}

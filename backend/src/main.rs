@@ -1,3 +1,5 @@
+// Simple CLI interface for functions provided in htar
+
 use htar::{run_on_file, start_web_server};
 
 // CLI library
@@ -33,19 +35,22 @@ async fn main() {
         start_web_server().await;
     } else {
         // Run in command line mode
-        // TODO:: Add error checking for missing/invalid path
-
-        if let (Some(path), Some(target_type)) = (args.path, args.target) {
-            let replacement_data = run_on_file(path, target_type);
-
-            if args.human_readable {
-                println!("{}", replacement_data)
-            } else {
-                println!("{}", serde_json::to_string(&replacement_data).unwrap())
+        match (args.path, args.target) {
+            (None, _) => {
+                println!("Missing path to source file (use -p)")
             }
-        } else {
-            //TODO: Improve errors
-            println!("Missing arguments");
+            (_, None) => {
+                println!("Missing target type (use -t)")
+            }
+            (Some(path), Some(target_type)) => {
+                let replacement_data = run_on_file(path, target_type);
+
+                if args.human_readable {
+                    println!("{}", replacement_data)
+                } else {
+                    println!("{}", serde_json::to_string(&replacement_data).unwrap())
+                }
+            }
         }
     }
 }

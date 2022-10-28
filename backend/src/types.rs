@@ -3,26 +3,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
-pub enum Term {
-    Type(String),
-    Variable(String),
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct Alias {
-    pub query_str: String,
-    pub source: String,
-    pub terms: Vec<Term>,
-}
-
+// REQUEST
+// Contains data needed for a request
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RequestAlias {
     pub target_type: String,
     pub source: String,
 }
 
+// RESPONSE
+// Contains information about matches found in response to a request
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ResponseMatches {
     pub echo_request: RequestAlias,
@@ -31,6 +21,7 @@ pub struct ResponseMatches {
 
 impl fmt::Display for ResponseMatches {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Human readable printing for a response
         let matches: Vec<String> = self
             .matches
             .clone()
@@ -68,4 +59,19 @@ pub struct Range {
 pub struct Position {
     pub row: usize,
     pub col: usize,
+}
+
+// TARGET
+// Used to convert a type signature to a list of terms
+#[derive(Debug)]
+pub struct Target {
+    pub query_str: String,
+    pub source: String,
+    pub terms: Vec<Term>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Term {
+    Type(String),
+    Variable(String),
 }

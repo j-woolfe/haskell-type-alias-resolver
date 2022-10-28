@@ -1,3 +1,6 @@
+// Provides driver code to use functions from alias in useful ways
+// Can be run in ongoing server mode or as single shot execution
+
 mod alias;
 mod types;
 
@@ -18,10 +21,10 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 
 pub async fn start_web_server() {
+    // Run a http server which responds to JSON on port 3000 with JSONified ResponseMatches
     let app = Router::new()
         .route("/api", post(get_matching_aliases))
         .route("/echo", get(echo))
-        // .route("/api", get(|| async {"Hello"}))
         .layer(
             CorsLayer::new()
                 .allow_methods(vec![Method::GET, Method::POST])
@@ -29,7 +32,6 @@ pub async fn start_web_server() {
                 .allow_headers(Any),
         );
 
-    // let addr = "0.0.0.0:3000";
     let addr = "127.0.0.1:3000";
 
     println!("Serving on {addr}");
@@ -42,16 +44,19 @@ pub async fn start_web_server() {
 pub async fn get_matching_aliases(
     extract::Json(payload): extract::Json<RequestAlias>,
 ) -> Json<ResponseMatches> {
-    // dbg!(&payload);
-    dbg!(alias_replacement(payload.clone()));
+    // Extract useful Request from json and run alias_replacement with it
+
+    // dbg!(alias_replacement(payload.clone()));
     Json(alias_replacement(payload))
 }
 
 async fn echo(extract::Json(payload): extract::Json<RequestAlias>) -> Json<RequestAlias> {
+    // For testing
     Json(payload)
 }
 
 pub fn run_on_file(path: PathBuf, target_type: String) -> ResponseMatches {
+    // Use alias replacement on a source file
     let source = read_to_string(path).unwrap();
     let payload = RequestAlias {
         source,
