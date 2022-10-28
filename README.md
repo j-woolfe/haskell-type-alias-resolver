@@ -1,7 +1,7 @@
 # Haskell Type Alias Resolver
 
 The Haskell type alias resolver (HTAR) is a system for locating places in Haskell
-source code where type aliases could be used to improve readabilty. It consists of:
+source code where type aliases could be used to improve readability. It consists of:
 
 - a Rust based back-end which utilises Treesitter to do most of the heavy lifting
 - a VSCode extension which incorporates the application into VSCode
@@ -47,14 +47,14 @@ Open `vscode-extension/haskell-type-alias-resolver/` in VSCode and run the proje
 `F5`
 
 Extension runs HTAR on save and provides information diagnostics and code actions for
-potential replacements. USe `Ctrl-,` to automatically apply the 'best' replacement
+potential replacements. Use `Ctrl-,` to automatically apply the 'best' replacement
 
 ## Implementation
 At a high level, the back-end operates by:
 - Using Treesitter to parse target type signature and modify the generated S-Tree to form
     a new Treesitter query which will match type aliases of a similar form
 - Using Treesitter to parse source file into a simple AST
-- Running the generated target query on the parsed source file to find candidate subtrees
+- Running the generated target query on the parsed source file to find candidate sub-trees
 - Performing raw text processing on text locations associated with candidates to check
     for the consistency of concrete and generic types
 - In the case of generic types, generate a mapping from type parameter to concrete type
@@ -67,15 +67,15 @@ input source and target as JSON and responds with the output over http.
 ### Treesitter
 The Treesitter library is central to the operation of HTAR. It is a parsing library
 intended to be used for development tools. It features very efficient incremental
-parsing, is capable of handling invalid input gracefully and has prewritten grammars for
+parsing, is capable of handling invalid input gracefully and has pre-written grammars for
 many languages. At this stage, this project is not taking full advantage of the
-incremental parsing features Treesitter supports as perfomance has not been a concern
+incremental parsing features Treesitter supports as performance has not been a concern
 yet. If/when speed becomes a problem, maintaining a single AST structure instead of
-reparsing each time would likely result is a large speedup.
+re-parsing each time would likely result is a large speedup.
 
 The Haskell grammar for Treesitter is still in development and as such you may encounter
 strange bugs parsing some expressions. This grammar is also one of the slower Treesitter
-grammars and there is some potential for further perfomance gains as this grammar is
+grammars and there is some potential for further performance gains as this grammar is
 improved.
 
 Treesitter features language bindings for a number of languages including Haskell
@@ -84,9 +84,9 @@ Haskell bindings is lacking. Rust still allows the use of a rich type system whi
 simplified the conversions between Haskell, Rust and TypeScript.
 
 ### VSCode
-VSCode was choosen as the target editor due to its popularity, cross-platform
+VSCode was chosen as the target editor due to its popularity, cross-platform
 compatibility and rich extension API. The extension is relatively small, the only
-signficant computation it performs is searching the file for lines that may contain type
+significant computation it performs is searching the file for lines that may contain type
 signatures. These lines are used as targets when the HTAR command line tool is invoked.
 
 The VSCode extension API is used directly here as the scale of the application made a
