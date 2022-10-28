@@ -3,4 +3,4 @@
 	url = https://github.com/tree-sitter/tree-sitter-haskell
 [submodule "vscode-extension/haskell-type-alias-resolver"]
 	path = vscode-extension/haskell-type-alias-resolver
-	url = https://github.com/jwai0004/htar-vs-code
+	url = https://github.com/jwai0004/htar-vs-code/tree/FIT3144Submission
